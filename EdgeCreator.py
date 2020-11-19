@@ -3,6 +3,8 @@
 import csv
 import math
 
+MAXIMUM_DISTANCE = 1 # The maximum number of light years a spaceship can travel before needing a refuel
+
 # Get the X, Y, Z cordinates of a galaxy
 # TODO - calculate this once and save the value
 def getCord(gal):
@@ -50,6 +52,14 @@ print ("Galaxy data")
 prettyPrint(galaxies)
 
 # Calculate edges
+edges = []
 for startKey in galaxies:
     for endKey in galaxies:
         print (startKey, " TO ", endKey, calcDistance(galaxies[startKey], galaxies[endKey]))
+        if calcDistance(galaxies[startKey], galaxies[endKey]) < MAXIMUM_DISTANCE:
+            s = startKey + " to " + endKey
+            edges.append(s)
+
+print ("\n\n ********** \n EDGES \n******* \n ")
+for edge in edges:
+    print (edge)
