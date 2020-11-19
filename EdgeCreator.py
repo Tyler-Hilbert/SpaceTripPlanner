@@ -57,7 +57,7 @@ for startKey in galaxies:
     for endKey in galaxies:
         print (startKey, " TO ", endKey, calcDistance(galaxies[startKey], galaxies[endKey]))
         if calcDistance(galaxies[startKey], galaxies[endKey]) < MAXIMUM_DISTANCE:
-            s = startKey + " to " + endKey
+            s = '"' + startKey + '"' + " to " + '"' + endKey + '"'
             edges.append(s)
 
 print ("\n\n ********** \n EDGES \n******* \n ")
