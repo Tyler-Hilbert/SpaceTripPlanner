@@ -4,6 +4,7 @@ import csv
 import math
 
 MAXIMUM_DISTANCE = 1 # The maximum number of light years a spaceship can travel before needing a refuel
+TEXT_OUTPUT = False
 
 # Get the X, Y, Z cordinates of a galaxy
 # TODO - calculate this once and save the value
@@ -26,6 +27,25 @@ def calcDistance(startGal, endGal):
         (startCord[1] - startCord[1]) ** 2 +
         (startCord[2] - startCord[2]) ** 2
     )
+
+# Cleans up galaxy name so it will work with DOT
+def cleanName(name):
+    replacements = [
+        (".", ""),
+        ("/", "_"),
+        ("'", ""),
+        ("=", "_"),
+        ("-", ""),
+        (" ", "_"),
+        (" ", "_"),
+        ("_", "")
+    ]
+    for repl in replacements:
+        while repl[0] in name:
+            name = name.replace(repl[0], repl[1])
+    return name
+
+
 
 # Prints a dictionary in a more readable format
 def prettyPrint(d, indent=0):
@@ -56,8 +76,11 @@ edges = []
 for startKey in galaxies:
     for endKey in galaxies:
         print (startKey, " TO ", endKey, calcDistance(galaxies[startKey], galaxies[endKey]))
-        if calcDistance(galaxies[startKey], galaxies[endKey]) < MAXIMUM_DISTANCE:
-            s = '"' + startKey + '"' + " to " + '"' + endKey + '"'
+        if calcDistance(galaxies[startKey], galaxies[endKey]) < MAXIMUM_DISTANCE and startKey != endKey:
+            if TEXT_OUTPUT:
+                s = '"' + startKey + '"' + " to " + '"' + endKey + '"'
+            else:
+                s = cleanName(startKey)+ " -- " + cleanName(endKey)
             edges.append(s)
 
 print ("\n\n ********** \n EDGES \n******* \n ")
