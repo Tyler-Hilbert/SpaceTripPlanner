@@ -1,13 +1,13 @@
 # Creates edges between galaxies where a space ship could travel between
+# Outputs the graph data into CUDA code
 
 import csv
 import math
 
 MAXIMUM_DISTANCE = 1 # The maximum number of light years a spaceship can travel before needing a refuel
-TEXT_OUTPUT = False
+DEBUG = False # This will print more verbose. IT WILL NOT OUTPUT VALID CUDA CODE WHEN THIS IS TRUE. USE ONLY WHEN DEBUGGING
 
 # Get the X, Y, Z cordinates of a galaxy
-# TODO - calculate this once and save the value
 def getCord(gal):
     theta = 15 * (int(gal['RA'].split(" ")[0]) + float(gal['RA'].split(" ")[1])/60)
     phi = int(gal['DEC'].split(" ")[0]) + int(gal['DEC'].split(" ")[1])/60
@@ -28,61 +28,60 @@ def calcDistance(startGal, endGal):
         (startCord[2] - startCord[2]) ** 2
     )
 
-# Cleans up galaxy name so it will work with DOT
-def cleanName(name):
-    replacements = [
-        (".", ""),
-        ("/", "_"),
-        ("'", ""),
-        ("=", "_"),
-        ("-", ""),
-        (" ", "_"),
-        (" ", "_"),
-        ("_", "")
-    ]
-    for repl in replacements:
-        while repl[0] in name:
-            name = name.replace(repl[0], repl[1])
-    return name
+# Counts the number of edges with the given start node
+# This is used for outputting the length in cuda
+def getStartCount(edges, start):
+    count = 0
+    for edge in edges:
+        if edge['start'] == start:
+            count += 1
+    return count
 
-
-
-# Prints a dictionary in a more readable format
-def prettyPrint(d, indent=0):
-   for key, value in d.items():
-      print('\t' * indent + str(key))
-      if isinstance(value, dict):
-         prettyPrint(value, indent+1)
-      else:
-         print('\t' * (indent+1) + str(value))
 
 # Read in galaxy data
-galaxies = {}
+galaxies = []
 with open('GalaxiesWithDistances.csv', 'r') as file:
     reader = csv.reader(file)
-    firstRow = True
+    first = True
     for row in reader:
-        if firstRow:
-            firstRow = False
+        if first:
+            first = False
             continue
-        galaxies[row[0]] = {'RA': row[1], "DEC": row[2], "LY": row[3]}
-
-# Print Galaxies
-print ("Galaxy data")
-prettyPrint(galaxies)
+        galaxies.append({'Name': row[0], 'RA': row[1], "DEC": row[2], "LY": row[3]})
 
 # Calculate edges
 edges = []
-for startKey in galaxies:
-    for endKey in galaxies:
-        print (startKey, " TO ", endKey, calcDistance(galaxies[startKey], galaxies[endKey]))
-        if calcDistance(galaxies[startKey], galaxies[endKey]) < MAXIMUM_DISTANCE and startKey != endKey:
-            if TEXT_OUTPUT:
-                s = '"' + startKey + '"' + " to " + '"' + endKey + '"'
-            else:
-                s = cleanName(startKey)+ " -- " + cleanName(endKey)
-            edges.append(s)
+for startGalIndex in range(len(galaxies)):
+    for endGalIndex in range(len(galaxies)):
+        if startGalIndex != endGalIndex and calcDistance(galaxies[startGalIndex], galaxies[endGalIndex]) < MAXIMUM_DISTANCE:
+            edge = {'start':"{0:0=2d}".format(startGalIndex), 'end':"{0:0=2d}".format(endGalIndex)}
+            edges.append(edge)
 
-print ("\n\n ********** \n EDGES \n******* \n ")
-for edge in edges:
-    print (edge)
+# Output
+if DEBUG:
+    print ("********** \n EDGES \n******* \n ")
+    for edge in edges:
+        print (edge)
+
+# Print graph in CUDA code
+print ("Node node[", len(galaxies), "];")
+print ("int edges[", len(edges), "];")
+
+if DEBUG:
+    print ("********** \n START AND LENGTH CU OUTPUT \n******* \n ")
+
+completedStart = []
+for i in range(len(edges)):
+    if edges[i]['start'] not in completedStart:
+        completedStart.append(edges[i]['start'])
+        startS = "node[" + str(edges[i]['start']) + "].start = " + str(i) + ";"
+        print (startS)
+        lengthS = "node[" + str(edges[i]['start']) + "].length = " + str(getStartCount(edges, edges[i]['start'])) + ";"
+        print (lengthS)
+
+if DEBUG:
+    print ("********** \n EDGES CU OUTPUT \n******* \n ")
+
+for i in range(len(edges)):
+    edgeS = "edges[" + str(i) + "] = " + str(edges[i]['end']) + ";"
+    print (edgeS)
