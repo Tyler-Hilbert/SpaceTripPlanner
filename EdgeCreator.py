@@ -6,6 +6,7 @@ import math
 
 MAXIMUM_DISTANCE = 1 # The maximum number of light years a spaceship can travel before needing a refuel
 DEBUG = False # This will print more verbose. IT WILL NOT OUTPUT VALID CUDA CODE WHEN THIS IS TRUE. USE ONLY WHEN DEBUGGING
+GRAPH_NUMERIC = False # If the output GV file should output id number instead of galaxy names
 
 # Get the X, Y, Z cordinates of a galaxy
 def getCord(gal):
@@ -36,6 +37,23 @@ def getStartCount(edges, start):
         if edge['start'] == start:
             count += 1
     return count
+
+# Cleans up galaxy name so it will work with DOT
+def cleanName(name):
+    replacements = [
+        (".", ""),
+        ("/", "_"),
+        ("'", ""),
+        ("=", "_"),
+        ("-", ""),
+        (" ", "_"),
+        (" ", "_"),
+        ("_", "")
+    ]
+    for repl in replacements:
+        while repl[0] in name:
+            name = name.replace(repl[0], repl[1])
+    return name
 
 
 # Read in galaxy data
@@ -98,3 +116,18 @@ print ("int edges[", len(edges), "];")
 for i in range(len(edges)):
     edgeS = "edges[" + str(i) + "] = " + str(edges[i]['end']) + ";"
     print (edgeS)
+
+# Graph (dot) creator
+f = open("output.gv", "w")
+f.write("strict graph G {\n")
+for edge in edges:
+    if GRAPH_NUMERIC:
+        eStr = edge['start'] + " -- " + edge['end'] + "\n"
+    else:
+        eStr = cleanName(galaxies[int(edge['start'])]['Name'])
+        eStr += " -- "
+        eStr += cleanName(galaxies[int(edge['end'])]['Name'])
+        eStr += "\n"
+    f.write(eStr)
+f.write("}")
+f.close()
