@@ -1,11 +1,15 @@
 # Creates edges between galaxies where a space ship could travel between
-# Outputs the graph data into CUDA code
+# Outputs:
+#  output.gv -- The graph in a format that can be turned into a png using:
+#    `$dot -Tpng output.gv -o output.png`
+#    // After installing graphviz `$brew install graphviz`
+#  graph_variables.cu -- The graph data output into a C/CUDA file already instantiated
+#    This C/CUDA code will need to be copied into the kernel source file
 
 import csv
 import math
 
 MAXIMUM_DISTANCE = 1 # The maximum number of light years a spaceship can travel before needing a refuel
-DEBUG = False # This will print more verbose. IT WILL NOT OUTPUT VALID CUDA CODE WHEN THIS IS TRUE. USE ONLY WHEN DEBUGGING
 GRAPH_NUMERIC = False # If the output GV file should output id number instead of galaxy names
 
 # Get the X, Y, Z cordinates of a galaxy
@@ -75,47 +79,45 @@ for startGalIndex in range(len(galaxies)):
             edge = {'start':"{0:0=2d}".format(startGalIndex), 'end':"{0:0=2d}".format(endGalIndex)}
             edges.append(edge)
 
-# Output
-if DEBUG:
-    print ("********** \n EDGES \n******* \n ")
-    for edge in edges:
-        print (edge)
+# Print
+print ("********** \n EDGES \n******* \n ")
+for edge in edges:
+    print (edge)
 
 # Print graph in CUDA code
-print ("Node node[", len(galaxies), "];")
-
-if DEBUG:
-    print ("********** \n START AND LENGTH CU OUTPUT \n******* \n ")
+f = open("graph_variables.cu", "w")
+f.write("Node node[")
+f.write(str(len(galaxies)))
+f.write("];\n")
 
 completedStart = []
 for i in range(len(edges)):
     if edges[i]['start'] not in completedStart:
         completedStart.append(edges[i]['start'])
-        startS = "node[" + str(edges[i]['start']) + "].start = " + str(i) + ";"
-        print (startS)
-        lengthS = "node[" + str(edges[i]['start']) + "].length = " + str(getStartCount(edges, edges[i]['start'])) + ";"
-        print (lengthS)
+        startS = "node[" + str(edges[i]['start']) + "].start = " + str(i) + ";\n"
+        f.write (startS)
+        lengthS = "node[" + str(edges[i]['start']) + "].length = " + str(getStartCount(edges, edges[i]['start'])) + ";\n"
+        f.write (lengthS)
 
-if DEBUG:
-    print ("********** \n Galaxy names \n******* \n ")
 
 for i in range(len(galaxies)):
-    nameS = "node[" + str(i) + "].name = '" + galaxies[i]['Name'].replace("'", "") + "';"
-    print (nameS)
+    nameS = "node[" + str(i) + "].name = '" + galaxies[i]['Name'].replace("'", "") + "';\n"
+    f.write (nameS)
     id0 = str( (int)((i - (i%10))/10))
     id1 = str(i % 10)
-    idS = "node[" + str(i) + "].id[0] = '" + id0 + "'; node[" + str(i) + "].id[1] = '" + id1 + "';"
-    print (idS)
+    idS = "node[" + str(i) + "].id[0] = '" + id0 + "'; node[" + str(i) + "].id[1] = '" + id1 + "';\n"
+    f.write (idS)
 
 
-if DEBUG:
-    print ("********** \n EDGES CU OUTPUT \n******* \n ")
-
-print ("int edges[", len(edges), "];")
+f.write("int edges[")
+f.write(str(len(edges)))
+f.write("];\n")
 
 for i in range(len(edges)):
-    edgeS = "edges[" + str(i) + "] = " + str(edges[i]['end']) + ";"
-    print (edgeS)
+    edgeS = "edges[" + str(i) + "] = " + str(edges[i]['end']) + ";\n"
+    f.write (edgeS)
+
+f.close()
 
 # Graph (dot) creator
 f = open("output.gv", "w")
