@@ -86,6 +86,10 @@ for edge in edges:
 
 # Print graph in CUDA code
 f = open("graph_variables.cu", "w")
+f.write ("// THIS IS A GENERATED FILE USING EdgeCreator.py\n")
+f.write ("// Number of lightyears a spaceship can travel: ")
+f.write (str(MAXIMUM_DISTANCE))
+f.write ("\n")
 f.write("Node node[")
 f.write(str(len(galaxies)))
 f.write("];\n")
@@ -101,7 +105,7 @@ for i in range(len(edges)):
 
 
 for i in range(len(galaxies)):
-    nameS = "node[" + str(i) + "].name = '" + galaxies[i]['Name'].replace("'", "") + "';\n"
+    nameS = 'node[' + str(i) + '].name = "' + galaxies[i]['Name'].replace("'", "") + '";\n'
     f.write (nameS)
     id0 = str( (int)((i - (i%10))/10))
     id1 = str(i % 10)
