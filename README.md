@@ -1,3 +1,1 @@
-$ python3 EdgeCreator.py > out  
-// Look in out file and copy everything after ***** EDGES ***** into 1LY.gv  
-$ dot -Tpng 1LY.gv -o 1LY.png
+EdgeCreator.py will calculate the graph and output to graph_variables.cu (used for CUDA) and output.gv (used to create plot of graph)
