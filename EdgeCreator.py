@@ -123,6 +123,26 @@ for i in range(len(edges)):
 
 f.close()
 
+
+# Print graph in regular C++ datastructure for sequential BFS (for comparison to CUDA)
+f = open("graph_variables.cpp", "w")
+f.write ("// THIS IS A GENERATED FILE USING EdgeCreator.py\n")
+f.write ("// Number of lightyears a spaceship can travel: ")
+f.write (str(MAXIMUM_DISTANCE))
+f.write ("\n")
+
+# Add nodes
+for i in range(len(galaxies)):
+    nameS = 'graph.AddNode("' + galaxies[i]['Name'].replace("'", "") + '");\n'
+    f.write (nameS)
+
+# Add edges
+for edge in edges:
+    edgeS = "graph.AddEdge(" +  edge['start'] + "," + edge['end'] + ");\n"
+    f.write(edgeS)
+
+f.close()
+
 # Graph (dot) creator
 f = open("output.gv", "w")
 f.write("strict graph G {\n")
