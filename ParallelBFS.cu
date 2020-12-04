@@ -22,10 +22,7 @@ typedef struct
 __global__ void Bfs_Kernel(Node* vertexList, int* edgeList, int* frontierList, bool* visitedList, int* distanceList, bool* complete, char* pathList)
 {
 	// Calculate vertix ID from threads/blocks
-	int id = threadIdx.x + blockIdx.x * blockDim.x;
-	if (id > NUM_NODES)
-		*complete = false;
-
+	int id = threadIdx.x;
 
 	if (frontierList[id] == 1 && visitedList[id] == false)
 	{
