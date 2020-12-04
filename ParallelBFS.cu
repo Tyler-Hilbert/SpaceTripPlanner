@@ -1,17 +1,16 @@
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-#include <cuda.h>
-#include <device_functions.h>
-#include <cuda_runtime_api.h>
-
 #include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <conio.h>
 #include <time.h>
 #define NUM_NODES 34
 #define NUM_EDGES 272
+
+#define CUDACHECKERROR( call ) {			\
+	cudaError_t result = call;              \
+	if ( cudaSuccess != result )            \
+    fprintf(stderr, "CUDA error %i in %s:%s\n%s", result, __FILE__, __LINE__, cudaGetErrorString( result ));  \
+}
 
 typedef struct
 {
@@ -492,67 +491,69 @@ int main(){
 	char path[NUM_NODES * NUM_NODES * 2] = { '0' };
 
 	// Set source node as first to be visited
-	int sourceIdx = 25;
+	int sourceIdx = 0;
 	frontier[sourceIdx] = 1;
 
 	// Init data on device
 	Node* vertexList;
-	cudaMalloc((void**)&vertexList, sizeof(Node) * NUM_NODES);
-	cudaMemcpy(vertexList, node, sizeof(Node) * NUM_NODES, cudaMemcpyHostToDevice);
-
 	int* edgeList;
-	cudaMalloc((void**)&edgeList, sizeof(int) * NUM_EDGES);
-	cudaMemcpy(edgeList, edges, sizeof(int) * NUM_EDGES, cudaMemcpyHostToDevice);
-
 	int* frontierList;
-	cudaMalloc((void**)&frontierList, sizeof(int) * NUM_NODES);
-	cudaMemcpy(frontierList, frontier, sizeof(int) * NUM_NODES, cudaMemcpyHostToDevice);
-
 	bool* visitedList;
-	cudaMalloc((void**)&visitedList, sizeof(bool) * NUM_NODES);
-	cudaMemcpy(visitedList, visited, sizeof(bool) * NUM_NODES, cudaMemcpyHostToDevice);
-
 	int* distanceList;
-	cudaMalloc((void**)&distanceList, sizeof(int) * NUM_NODES);
-	cudaMemcpy(distanceList, pathLength, sizeof(int) * NUM_NODES, cudaMemcpyHostToDevice);
-
 	char* pathList;
-	cudaMalloc((void**)&pathList, sizeof(char) * NUM_NODES * NUM_NODES * 2);
-	cudaMemcpy(pathList, path, sizeof(char) * NUM_NODES * NUM_NODES * 2, cudaMemcpyHostToDevice);
+
+	CUDACHECKERROR(cudaMalloc((void**)&vertexList, sizeof(Node) * NUM_NODES));
+	CUDACHECKERROR(cudaMalloc((void**)&edgeList, sizeof(int) * NUM_EDGES));
+	CUDACHECKERROR(cudaMalloc((void**)&frontierList, sizeof(int) * NUM_NODES));
+	CUDACHECKERROR(cudaMalloc((void**)&visitedList, sizeof(bool) * NUM_NODES));
+	CUDACHECKERROR(cudaMalloc((void**)&distanceList, sizeof(int) * NUM_NODES));
+	CUDACHECKERROR(cudaMalloc((void**)&pathList, sizeof(char) * NUM_NODES * NUM_NODES * 2));
+
+	CUDACHECKERROR(cudaMemcpy(vertexList, node, sizeof(Node) * NUM_NODES, cudaMemcpyHostToDevice));
+	CUDACHECKERROR(cudaMemcpy(edgeList, edges, sizeof(int) * NUM_EDGES, cudaMemcpyHostToDevice));
+	CUDACHECKERROR(cudaMemcpy(frontierList, frontier, sizeof(int) * NUM_NODES, cudaMemcpyHostToDevice));
+	CUDACHECKERROR(cudaMemcpy(visitedList, visited, sizeof(bool) * NUM_NODES, cudaMemcpyHostToDevice));
+	CUDACHECKERROR(cudaMemcpy(distanceList, pathLength, sizeof(int) * NUM_NODES, cudaMemcpyHostToDevice));
+	CUDACHECKERROR(cudaMemcpy(pathList, path, sizeof(char) * NUM_NODES * NUM_NODES * 2, cudaMemcpyHostToDevice));
 
 	// Prepare for loop
 	bool complete;
-	bool* d_done;
-	cudaMalloc((void**)&d_done, sizeof(bool));
+	bool* completeDevice;
+	CUDACHECKERROR(cudaMalloc((void**)&completeDevice, sizeof(bool)));
 	int count = 0;
 
-	// Loop kernel until complete
-
+	// Setup timing
 	float time;
 	cudaEvent_t start, stop;
 
-	cudaEventCreate(&start);
-	cudaEventCreate(&stop);
-	cudaEventRecord(start, 0);
+	// Start timer
+	CUDACHECKERROR(cudaEventCreate(&start));
+	CUDACHECKERROR(cudaEventCreate(&stop));
+	CUDACHECKERROR(cudaEventRecord(start, 0));
 
+	// Start BFS
 	do {
 		complete = true;
-		cudaMemcpy(d_done, &complete, sizeof(bool), cudaMemcpyHostToDevice);
-		Bfs_Kernel << <1, NUM_NODES >> > (vertexList, edgeList, frontierList, visitedList, distanceList, d_done, pathList);
-		cudaMemcpy(&complete, d_done, sizeof(bool), cudaMemcpyDeviceToHost);
+		CUDACHECKERROR(cudaMemcpy(completeDevice, &complete, sizeof(bool), cudaMemcpyHostToDevice));
+
+		// While kernel not complete, loop until complete
+		Bfs_Kernel << <1, NUM_NODES >> > (vertexList, edgeList, frontierList, visitedList, distanceList, completeDevice, pathList);
+
+		// Get current result from device
+		CUDACHECKERROR(cudaMemcpy(&complete, completeDevice, sizeof(bool), cudaMemcpyDeviceToHost));
 		count++;
 
 	} while (!complete);
 
-
-	cudaEventRecord(stop, 0);
-	cudaEventSynchronize(stop);
-	cudaEventElapsedTime(&time, start, stop);
+	// End timer
+	CUDACHECKERROR(cudaEventRecord(stop, 0));
+	CUDACHECKERROR(cudaEventSynchronize(stop));
+	CUDACHECKERROR(cudaEventElapsedTime(&time, start, stop));
 
 
 	// Copy results to host
-	cudaMemcpy(pathLength, distanceList, sizeof(int) * NUM_NODES, cudaMemcpyDeviceToHost);
-	cudaMemcpy(path, pathList, sizeof(char) * NUM_NODES * NUM_NODES * 2, cudaMemcpyDeviceToHost);
+	CUDACHECKERROR(cudaMemcpy(pathLength, distanceList, sizeof(int) * NUM_NODES, cudaMemcpyDeviceToHost));
+	CUDACHECKERROR(cudaMemcpy(path, pathList, sizeof(char) * NUM_NODES * NUM_NODES * 2, cudaMemcpyDeviceToHost));
 
 	// print results
 	printf("\n------\n");
@@ -574,11 +575,11 @@ int main(){
 	printf("Elapsed Time:  %3.5f ms \n", time);
 
 
-	cudaFree(vertexList);
-	cudaFree(edgeList);
-	cudaFree(frontierList);
-	cudaFree(visitedList);
-	cudaFree(distanceList);
-	cudaFree(pathList);
+	CUDACHECKERROR(cudaFree(vertexList));
+	CUDACHECKERROR(cudaFree(edgeList));
+	CUDACHECKERROR(cudaFree(frontierList));
+	CUDACHECKERROR(cudaFree(visitedList));
+	CUDACHECKERROR(cudaFree(distanceList));
+	CUDACHECKERROR(cudaFree(pathList));
 
 }
