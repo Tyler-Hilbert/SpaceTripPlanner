@@ -8,5 +8,6 @@ ParallelBFS.cu performs a BFS in parallel in CUDA to find the best path between 
 
 These results are compared to a sequential BFS algorithm.  
 
-[The report can be found here.](https://github.com/Tyler-Hilbert/SpaceTripPlanner/blob/master/Report/Report.pdf)
+[The report can be found here.](https://github.com/Tyler-Hilbert/SpaceTripPlanner/blob/master/Report/Report.pdf)  
 
+[(Random blog post that uses this project)](https://medium.com/@tylerjoshuahilbert/chatgpt-as-a-code-comprehension-tool-af86f878ed04)  
